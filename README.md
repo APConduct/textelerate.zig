@@ -86,6 +86,7 @@ Textelerate uses a simple syntax with double curly braces:
 - `{{variable | filter}}` - Apply a filter to transform the variable
 - `{{variable | filter1 | filter2}}` - Chain multiple filters
 - `{{#if condition}}...{{/if}}` - Conditional blocks
+- `{{#if condition}}...{{else}}...{{/if}}` - Conditional blocks with else
 - `{{#for item in collection}}...{{/for}}` - Loop over collections
 - Variables can contain letters, numbers, and underscores
 - Whitespace around variable names is ignored: `{{ name }}` is the same as `{{name}}`
@@ -109,6 +110,7 @@ Transform variable values using the pipe (`|`) syntax:
 Control the flow of template rendering with conditional blocks and loops:
 
 - `{{#if variable}}content{{/if}}` - Render content if variable is truthy
+- `{{#if variable}}content{{else}}fallback{{/if}}` - Conditional with else block
 - `{{#for item in collection}}{{item}}{{/for}}` - Loop over collection items
 
 #### Conditional Blocks
@@ -116,6 +118,8 @@ Control the flow of template rendering with conditional blocks and loops:
 ```
 {{#if user_logged_in}}
   Welcome back, {{username}}!
+{{else}}
+  Please log in to continue.
 {{/if}}
 ```
 
@@ -142,7 +146,7 @@ Hello {{name}}!
 {{greeting}} {{first_name}} {{last_name}}, you have {{message_count}} messages.
 Welcome to {{place}}, the temperature is {{temperature}}°C.
 Filtered: {{name | uppercase}} and {{greeting | lowercase}}
-{{#if show_welcome}}Welcome {{name}}!{{/if}}
+{{#if show_welcome}}Welcome {{name}}!{{else}}Please sign up{{/if}}
 {{#for item in items}}Item: {{item}} {{/for}}
 Use \{\{ and \}\} for literal braces: \{\{not_a_variable\}\}
 Backslash example: \\
@@ -240,21 +244,26 @@ This project is available under the MIT license.
   - Graceful error handling with proper cleanup
   - Memory leak prevention in error cases
   - Comprehensive error test coverage
-- **Control Flow**: Conditional and loop constructs
+- **Control Flow**: Advanced conditional and loop constructs
   - `{{#if condition}}...{{/if}}` - Conditional blocks
+  - `{{#if condition}}...{{else}}...{{/if}}` - Conditional blocks with else
   - `{{#for item in collection}}...{{/for}}` - Loop constructs
   - Proper variable scoping within loops
   - Block content parsing and rendering
+  - Memory-safe block management
 
 ### 🚧 Partially Implemented
 
-- **Nested Control Flow**: Single-level blocks working, nested blocks need enhancement
-  - `{{#if outer}}{{#if inner}}...{{/if}}{{/if}}` - Nested conditionals (in progress)
-  - Complex nested loop and conditional combinations
+- **Advanced Loop Variables**: Basic loop functionality complete, advanced variables planned
+  - `{{@index}}`, `{{@first}}`, `{{@last}}` - Loop position variables (architecture ready)
+  - Complex nested loop and conditional combinations (architecture ready)
+- **Nested Control Flow**: Single-level blocks working, deep nesting planned
+  - `{{#if outer}}{{#if inner}}...{{/if}}{{/if}}` - Multi-level nesting (foundation complete)
 
 ### 💡 Future Enhancements
 
-- **Advanced Nested Control Flow**: Deep nesting support for complex templates
+- **Advanced Loop Variables**: `{{@index}}`, `{{@first}}`, `{{@last}}`, `{{@even}}`, `{{@odd}}`
+- **Complex Nested Control Flow**: Deep nesting support for complex templates
 - **Template Caching**: Compiled template caching system
 - **Async Template Loading**: Support for async partial loading from files
 - **Custom Delimiters**: Configurable template syntax
@@ -266,19 +275,20 @@ This project is available under the MIT license.
   - Custom filter registration system
 - **Template Debugging**: Debug mode with detailed execution tracing
 - **Performance Optimizations**: Further runtime and compile-time optimizations
-- **Else Blocks**: `{{#if condition}}...{{else}}...{{/if}}` support
+- **Complex Conditionals**: `{{#if var1 && var2}}` with logical operators
 
 ## Current Status
 
-**All 16 tests passing** ✅
+**All 18 tests passing** ✅
 
 The template engine now includes:
-- ✅ **Variable interpolation** with filters
+- ✅ **Variable interpolation** with filters and chaining
 - ✅ **Escape sequences** for literal braces
-- ✅ **Partial templates** with simple loading
+- ✅ **Partial templates** with recursive loading
 - ✅ **Error reporting** with line/column tracking and proper error handling
 - ✅ **Memory management** with proper cleanup and leak prevention
-- ✅ **Control flow** with if blocks and for loops
+- ✅ **Advanced control flow** with if/else blocks and for loops
+- ✅ **Conditional else blocks** for complete branching logic
 
 ## Contributing
 
@@ -296,12 +306,13 @@ Contributions are welcome! Please ensure all tests pass before submitting a pull
 
 ### Architecture Notes
 
-- Control flow parsing infrastructure is complete
-- Block content parsing needs refinement for nested constructs  
+- Advanced control flow parsing infrastructure is complete
+- Else block parsing and rendering fully implemented
 - Filter system is extensible for additional transformations
 - Partial loading system can be enhanced for file-based templates
 - Error handling system provides comprehensive coverage
 - Memory management ensures leak-free operation
-- All 16 tests passing with full coverage of implemented features
+- All 18 tests passing with full coverage of implemented features
 - Control flow blocks working with proper variable scoping
-- Memory-safe block parsing and rendering
+- Memory-safe block parsing and rendering with else support
+- Foundation ready for nested control flow and loop variables

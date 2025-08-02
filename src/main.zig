@@ -2,6 +2,9 @@ const std = @import("std");
 
 const Allocator = std.mem.Allocator;
 
+/// Semantic version for the Textelerate template engine
+pub const version = std.SemanticVersion{ .major = 0, .minor = 1, .patch = 0 };
+
 const Error = @import("error.zig").TemplateError;
 const DetailedError = @import("error.zig").DetailedError;
 const Position = @import("error.zig").Position;

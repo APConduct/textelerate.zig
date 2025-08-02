@@ -1,6 +1,19 @@
 # Textelerate
 
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/yourusername/textelerate)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/yourusername/textelerate/actions)
+
 A fast and efficient template engine for Zig that supports both runtime and compile-time template compilation.
+
+## Version
+
+Current version: **0.1.0**
+
+This project follows [Semantic Versioning](https://semver.org/):
+- **MAJOR** version when you make incompatible API changes
+- **MINOR** version when you add functionality in a backwards compatible manner  
+- **PATCH** version when you make backwards compatible bug fixes
 
 ## Features
 

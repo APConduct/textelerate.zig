@@ -1,5 +1,8 @@
 const std = @import("std");
 
+// Semantic version for the Textelerate template engine
+const version = std.SemanticVersion{ .major = 0, .minor = 1, .patch = 0 };
+
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
@@ -51,6 +54,7 @@ pub fn build(b: *std.Build) void {
         .linkage = .static,
         .name = "textelerate",
         .root_module = lib_mod,
+        .version = version,
     });
 
     // This declares intent for the library to be installed into the standard
@@ -63,6 +67,7 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{
         .name = "textelerate",
         .root_module = exe_mod,
+        .version = version,
     });
 
     // This declares intent for the executable to be installed into the

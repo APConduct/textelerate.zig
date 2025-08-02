@@ -217,7 +217,7 @@ pub const Template = struct {
                                 // Apply filters
                                 var filtered_value = value;
                                 for (var_ref.filters) |filter| {
-                                    const new_value = try self.applyFilter(filtered_value, filter);
+                                    const new_value = try self.apply_filter(filtered_value, filter);
                                     // Free the previous filtered value if it was allocated
                                     if (filtered_value.ptr != value.ptr) {
                                         self.compiled.?.allocator.free(filtered_value);
@@ -248,25 +248,25 @@ pub const Template = struct {
                     }
                 },
                 .if_block => |if_block| {
-                    const condition = try self.evaluateCondition(ctx, if_block.condition_var);
+                    const condition = try self.evaluate_condition(ctx, if_block.condition_var);
                     const fragments_to_render = if (condition) if_block.then_fragments else (if_block.else_fragments orelse &[_]Fragment{});
 
                     for (fragments_to_render) |frag| {
-                        try self.renderFragment(frag, ctx, writer, allocator);
+                        try self.render_fragment(frag, ctx, writer, allocator);
                     }
                 },
                 .for_block => |for_block| {
-                    try self.renderForLoop(for_block, ctx, writer, allocator);
+                    try self.render_for_loop(for_block, ctx, writer, allocator);
                 },
                 .partial => |partial_name| {
-                    try self.renderPartial(partial_name, ctx, writer, allocator);
+                    try self.render_partial(partial_name, ctx, writer, allocator);
                 },
             }
         }
     }
 
     /// Evaluate a condition for if blocks
-    fn evaluateCondition(self: *Template, ctx: anytype, condition_var: u32) !bool {
+    fn evaluate_condition(self: *Template, ctx: anytype, condition_var: u32) !bool {
         const compiled = self.compiled orelse return Error.NotCompiled;
         const var_name = compiled.vars[condition_var].name;
 
@@ -292,7 +292,7 @@ pub const Template = struct {
     }
 
     /// Render a single fragment recursively
-    fn renderFragment(self: *Template, fragment: Fragment, ctx: anytype, writer: anytype, allocator: Allocator) !void {
+    fn render_fragment(self: *Template, fragment: Fragment, ctx: anytype, writer: anytype, allocator: Allocator) !void {
         switch (fragment) {
             .text => |text| try writer.writeAll(text),
             .variable => |var_ref| {
@@ -326,7 +326,7 @@ pub const Template = struct {
                             // Apply filters
                             var filtered_value = value;
                             for (var_ref.filters) |filter| {
-                                const new_value = try self.applyFilter(filtered_value, filter);
+                                const new_value = try self.apply_filter(filtered_value, filter);
                                 // Free the previous filtered value if it was allocated
                                 if (filtered_value.ptr != value.ptr) {
                                     self.compiled.?.allocator.free(filtered_value);
@@ -357,24 +357,24 @@ pub const Template = struct {
                 }
             },
             .if_block => |if_block| {
-                const condition = try self.evaluateCondition(ctx, if_block.condition_var);
+                const condition = try self.evaluate_condition(ctx, if_block.condition_var);
                 const fragments_to_render = if (condition) if_block.then_fragments else (if_block.else_fragments orelse &[_]Fragment{});
 
                 for (fragments_to_render) |frag| {
-                    try self.renderFragment(frag, ctx, writer, allocator);
+                    try self.render_fragment(frag, ctx, writer, allocator);
                 }
             },
             .for_block => |for_block| {
-                try self.renderForLoop(for_block, ctx, writer, allocator);
+                try self.render_for_loop(for_block, ctx, writer, allocator);
             },
             .partial => |partial_name| {
-                try self.renderPartial(partial_name, ctx, writer, allocator);
+                try self.render_partial(partial_name, ctx, writer, allocator);
             },
         }
     }
 
     /// Render a for loop with proper variable scoping and loop variables
-    fn renderForLoop(self: *Template, for_block: ForBlock, ctx: anytype, writer: anytype, allocator: Allocator) !void {
+    fn render_for_loop(self: *Template, for_block: ForBlock, ctx: anytype, writer: anytype, allocator: Allocator) !void {
         const compiled = self.compiled orelse return Error.NotCompiled;
         const collection_var_name = compiled.vars[for_block.collection_var].name;
 
@@ -402,7 +402,7 @@ pub const Template = struct {
 
                             // Render body fragments with enhanced loop context
                             for (for_block.body_fragments) |frag| {
-                                try self.renderFragmentWithLoopContext(frag, ctx, loop_context, writer, allocator);
+                                try self.render_fragment_with_loop_context(frag, ctx, loop_context, writer, allocator);
                             }
                         }
                     },
@@ -425,7 +425,7 @@ pub const Template = struct {
     };
 
     /// Render a fragment with enhanced loop context for variable scoping
-    fn renderFragmentWithLoopContext(self: *Template, fragment: Fragment, original_ctx: anytype, loop_ctx: LoopContext, writer: anytype, allocator: Allocator) !void {
+    fn render_fragment_with_loop_context(self: *Template, fragment: Fragment, original_ctx: anytype, loop_ctx: LoopContext, writer: anytype, allocator: Allocator) !void {
         switch (fragment) {
             .text => |text| try writer.writeAll(text),
             .variable => |var_ref| {
@@ -481,7 +481,7 @@ pub const Template = struct {
                 // Apply filters if any
                 var filtered_value = value;
                 for (var_ref.filters) |filter| {
-                    const new_value = try self.applyFilter(filtered_value, filter);
+                    const new_value = try self.apply_filter(filtered_value, filter);
                     // Free the previous filtered value if it was allocated
                     if (filtered_value.ptr != value.ptr) {
                         self.compiled.?.allocator.free(filtered_value);
@@ -500,13 +500,13 @@ pub const Template = struct {
             .if_block => {},
             .for_block => {},
             .partial => |partial_name| {
-                try self.renderPartial(partial_name, original_ctx, writer, allocator);
+                try self.render_partial(partial_name, original_ctx, writer, allocator);
             },
         }
     }
 
     /// Render a partial template
-    fn renderPartial(self: *Template, partial_name: []const u8, ctx: anytype, writer: anytype, allocator: Allocator) !void {
+    fn render_partial(self: *Template, partial_name: []const u8, ctx: anytype, writer: anytype, allocator: Allocator) !void {
         _ = self;
         _ = ctx;
         _ = allocator;
@@ -524,7 +524,7 @@ pub const Template = struct {
     }
 
     /// Apply a filter to a value
-    fn applyFilter(self: *Template, value: []const u8, filter: Filter) ![]const u8 {
+    fn apply_filter(self: *Template, value: []const u8, filter: Filter) ![]const u8 {
         const compiled = self.compiled orelse return Error.NotCompiled;
         const allocator = compiled.allocator;
 
@@ -662,7 +662,7 @@ pub const Template = struct {
                 const content = std.mem.trim(u8, source[var_start..var_end], " \t\n\r");
 
                 // Parse the content to determine type
-                const fragment_result = parseFragment(content, &variables, allocator, source, var_start) catch |err| {
+                const fragment_result = parse_fragment(content, &variables, allocator, source, var_start) catch |err| {
                     if (@import("builtin").is_test == false) {
                         print("Error at line {}, column {}: Failed to parse template fragment: {}\n", .{ var_line, var_column, err });
                     }
@@ -707,14 +707,14 @@ pub const Template = struct {
     };
 
     /// Parse a single fragment from template content
-    fn parseFragment(content: []const u8, variables: *Vec(Variable), allocator: Allocator, source: []const u8, start_pos: usize) !ParseResult {
+    fn parse_fragment(content: []const u8, variables: *Vec(Variable), allocator: Allocator, source: []const u8, start_pos: usize) !ParseResult {
         // Check for control flow
         if (std.mem.startsWith(u8, content, "#if ")) {
-            return try parseIfBlock(content[4..], variables, allocator, source, start_pos);
+            return try parse_if_block(content[4..], variables, allocator, source, start_pos);
         } else if (std.mem.startsWith(u8, content, "#if")) {
-            return try parseIfBlock(content[3..], variables, allocator, source, start_pos);
+            return try parse_if_block(content[3..], variables, allocator, source, start_pos);
         } else if (std.mem.startsWith(u8, content, "#for ")) {
-            return try parseForBlock(content[5..], variables, allocator, source, start_pos);
+            return try parse_for_block(content[5..], variables, allocator, source, start_pos);
         } else if (std.mem.startsWith(u8, content, "> ")) {
             // Partial include
             const partial_name = std.mem.trim(u8, content[2..], " \t\n\r");
@@ -722,13 +722,13 @@ pub const Template = struct {
             return ParseResult{ .fragment = Fragment{ .partial = owned_name } };
         } else {
             // Regular variable (possibly with filters)
-            const frag = try parseVariable(content, variables, allocator);
+            const frag = try parse_variable(content, variables, allocator);
             return ParseResult{ .fragment = frag };
         }
     }
 
     /// Parse an if block with complete block content parsing including else support
-    fn parseIfBlock(condition: []const u8, variables: *Vec(Variable), allocator: Allocator, source: []const u8, start_pos: usize) !ParseResult {
+    fn parse_if_block(condition: []const u8, variables: *Vec(Variable), allocator: Allocator, source: []const u8, start_pos: usize) !ParseResult {
         const condition_var = std.mem.trim(u8, condition, " \t\n\r");
 
         if (condition_var.len == 0) {
@@ -805,13 +805,13 @@ pub const Template = struct {
 
         // Parse the then block content recursively
         const then_content = source[block_start..block_end];
-        const then_fragments = try parseBlockContent(then_content, variables, allocator);
+        const then_fragments = try parse_block_content(then_content, variables, allocator);
 
         // Parse the else block content if it exists
         var else_fragments: ?[]Fragment = null;
         if (else_start) |else_pos| {
             const else_content = source[else_pos..else_end];
-            else_fragments = try parseBlockContent(else_content, variables, allocator);
+            else_fragments = try parse_block_content(else_content, variables, allocator);
         }
 
         const fragment = Fragment{ .if_block = .{
@@ -829,7 +829,7 @@ pub const Template = struct {
     }
 
     /// Parse a for block with complete block content parsing
-    fn parseForBlock(content: []const u8, variables: *Vec(Variable), allocator: Allocator, source: []const u8, start_pos: usize) !ParseResult {
+    fn parse_for_block(content: []const u8, variables: *Vec(Variable), allocator: Allocator, source: []const u8, start_pos: usize) !ParseResult {
         // Parse "item in collection" syntax
         var parts_iter = std.mem.splitSequence(u8, content, " in ");
         const item_name = std.mem.trim(u8, parts_iter.next() orelse "", " \t\n\r");
@@ -898,7 +898,7 @@ pub const Template = struct {
 
         // Parse the block content recursively
         const block_content = source[block_start..block_end];
-        const body_fragments = try parseBlockContent(block_content, variables, allocator);
+        const body_fragments = try parse_block_content(block_content, variables, allocator);
         const owned_item_name = try allocator.dupe(u8, item_name);
 
         const fragment = Fragment{ .for_block = .{
@@ -916,7 +916,7 @@ pub const Template = struct {
     }
 
     /// Parse block content recursively (for if/for block bodies)
-    fn parseBlockContent(content: []const u8, variables: *Vec(Variable), allocator: Allocator) ![]Fragment {
+    fn parse_block_content(content: []const u8, variables: *Vec(Variable), allocator: Allocator) ![]Fragment {
         var fragments = Vec(Fragment).init(allocator);
         errdefer {
             for (fragments.items) |fragment| {
@@ -1005,7 +1005,7 @@ pub const Template = struct {
                     break :blk Fragment{ .partial = owned_name };
                 } else blk: {
                     // Regular variable (possibly with filters)
-                    break :blk try parseVariable(var_content, variables, allocator);
+                    break :blk try parse_variable(var_content, variables, allocator);
                 };
 
                 try fragments.append(fragment);
@@ -1030,7 +1030,7 @@ pub const Template = struct {
     }
 
     /// Parse a variable with optional filters
-    fn parseVariable(content: []const u8, variables: *Vec(Variable), allocator: Allocator) !Fragment {
+    fn parse_variable(content: []const u8, variables: *Vec(Variable), allocator: Allocator) !Fragment {
         // Check for filters (pipe symbol)
         var parts_iter = std.mem.splitScalar(u8, content, '|');
         const var_part = std.mem.trim(u8, parts_iter.next() orelse content, " \t\n\r");
@@ -1218,7 +1218,7 @@ pub const Template = struct {
 /// const MyTemplate = compileTemplate("Hello {{name}}!");
 /// try MyTemplate.render(context, writer);
 /// ```
-pub fn compileTemplate(comptime template_str: []const u8) type {
+pub fn compile_template(comptime template_str: []const u8) type {
     return Template.compile_template(template_str);
 }
 
@@ -1251,7 +1251,7 @@ pub fn main() !void {
 
     // Compile-time template example
     print("\n2. Compile-time Template Example:\n", .{});
-    const CompiledTemplate = compileTemplate("{{greeting}} {{name}}! You have {{count}} messages.");
+    const CompiledTemplate = compile_template("{{greeting}} {{name}}! You have {{count}} messages.");
 
     const CompileTimeContext = struct {
         greeting: []const u8,

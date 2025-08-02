@@ -1,8 +1,9 @@
 # Textelerate
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/yourusername/textelerate)
+[![Version](https://img.shields.io/github/v/tag/APConduct/textelerate?label=version&color=blue)](https://github.com/yourusername/textelerate/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/yourusername/textelerate/actions)
+[![Tests](https://img.shields.io/github/actions/workflow/status/APConduct/textelerate/ci.yml?branch=main&label=tests)](https://github.com/yourusername/textelerate/actions)
+[![Zig](https://img.shields.io/badge/zig-0.14.1+-orange.svg)](https://ziglang.org/)
 
 A fast and efficient template engine for Zig that supports both runtime and compile-time template compilation.
 
@@ -12,7 +13,7 @@ Current version: **0.1.0**
 
 This project follows [Semantic Versioning](https://semver.org/):
 - **MAJOR** version when you make incompatible API changes
-- **MINOR** version when you add functionality in a backwards compatible manner  
+- **MINOR** version when you add functionality in a backwards compatible manner
 - **PATCH** version when you make backwards compatible bug fixes
 
 ## Features
@@ -36,27 +37,27 @@ const Template = @import("textelerate").Template;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    
+
     // Create and compile template
     var template = Template.init(allocator, "Hello {{name}}, you are {{age}} years old!");
     defer template.deinit();
     try template.compile();
-    
+
     // Define context
     const Context = struct {
         name: []const u8,
         age: u32,
     };
-    
+
     const context = Context{
         .name = "Alice",
         .age = 25,
     };
-    
+
     // Render template
     const result = try template.render_to_string(context, allocator);
     defer allocator.free(result);
-    
+
     std.debug.print("{s}\n", .{result}); // Output: Hello Alice, you are 25 years old!
 }
 ```
@@ -69,23 +70,23 @@ const compile_template = @import("textelerate").compile_template;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    
+
     // Create compile-time template (zero runtime cost for parsing)
     const MyTemplate = compile_template("Welcome {{name}} to {{place}}!");
-    
+
     const Context = struct {
         name: []const u8,
         place: []const u8,
     };
-    
+
     const context = Context{
         .name = "Bob",
         .place = "Zig Land",
     };
-    
+
     var buffer = std.ArrayList(u8).init(allocator);
     defer buffer.deinit();
-    
+
     try MyTemplate.render(context, buffer.writer());
     std.debug.print("{s}\n", .{buffer.items}); // Output: Welcome Bob to Zig Land!
 }
@@ -245,7 +246,7 @@ Textelerate includes comprehensive local testing tools to validate your changes 
 # Fast smoke test (30 seconds)
 ./scripts/quick-test.sh quick
 
-# Full CI simulation (3-5 minutes)  
+# Full CI simulation (3-5 minutes)
 ./scripts/quick-test.sh full
 
 # Individual components
@@ -265,7 +266,7 @@ act --list
 # Run specific job
 act --job test --platform ubuntu-latest=catthehacker/ubuntu:act-latest
 
-# Run full CI workflow  
+# Run full CI workflow
 act --workflows .github/workflows/ci.yml
 ```
 

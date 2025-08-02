@@ -52,13 +52,13 @@ pub fn main() !void {
 
 ```zig
 const std = @import("std");
-const compileTemplate = @import("textelerate").compileTemplate;
+const compile_template = @import("textelerate").compile_template;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
     
     // Create compile-time template (zero runtime cost for parsing)
-    const MyTemplate = compileTemplate("Welcome {{name}} to {{place}}!");
+    const MyTemplate = compile_template("Welcome {{name}} to {{place}}!");
     
     const Context = struct {
         name: []const u8,
@@ -171,9 +171,9 @@ Renders the template to a newly allocated string. Caller must free the result.
 #### `template.deinit() void`
 Cleans up allocated memory.
 
-### compileTemplate (Compile-time)
+### compile_template (Compile-time)
 
-#### `compileTemplate(comptime template_str: []const u8) type`
+#### `compile_template(comptime template_str: []const u8) type`
 Creates a compile-time optimized template. Returns a type with a `render()` method.
 
 The returned type has:

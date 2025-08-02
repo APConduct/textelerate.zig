@@ -203,30 +203,47 @@ This project is available under the MIT license.
 - **Filter System**: Variable transformation with `{{name | filter}}` syntax
   - `uppercase` - Convert text to uppercase
   - `lowercase` - Convert text to lowercase
-  - Filter chaining support
-
-### 🚧 In Progress / Planned Features
-
-- **Control Flow**: Conditional and loop constructs
-  - `{{#if condition}}...{{/if}}` - Conditional blocks
-  - `{{#for item in collection}}...{{/for}}` - Loop constructs
-- **Template Inheritance**: Include and extend functionality
+  - Filter chaining support with `{{name | filter1 | filter2}}`
+- **Template Inheritance**: Partial template inclusion
   - `{{> partial}}` - Include partial templates
-  - Template composition and inheritance
-- **Enhanced Error Reporting**: Better error messages with line/column numbers
+  - Simplified partial loading system
+- **Enhanced Error Reporting**: Line/column number tracking and detailed error messages
+  - Position-aware error reporting
+  - Descriptive error messages for common issues
+  - Graceful error handling with proper cleanup
+
+### 🚧 Partially Implemented
+
+- **Control Flow**: Architecture ready but needs block parsing refinement
+  - `{{#if condition}}...{{/if}}` - Conditional blocks (parser structure complete)
+  - `{{#for item in collection}}...{{/for}}` - Loop constructs (parser structure complete)
+  - Block content parsing needs enhancement for full functionality
+
+### 💡 Future Enhancements
+
+- **Advanced Control Flow**: Complete block parsing implementation
+- **Template Caching**: Compiled template caching system
+- **Async Template Loading**: Support for async partial loading from files
+- **Custom Delimiters**: Configurable template syntax
 - **Additional Filters**: More built-in transformation filters
   - `trim` - Remove whitespace
   - `length` - Get string/array length
   - `capitalize` - Capitalize first letter
-  - Custom filter registration
-
-### 💡 Future Enhancements
-
-- **Template Caching**: Compiled template caching system
-- **Async Template Loading**: Support for async partial loading
-- **Custom Delimiters**: Configurable template syntax
+  - Custom filter registration system
 - **Template Debugging**: Debug mode with detailed execution tracing
 - **Performance Optimizations**: Further runtime and compile-time optimizations
+
+## Current Status
+
+**All 13 tests passing** ✅
+
+The template engine now includes:
+- ✅ **Variable interpolation** with filters
+- ✅ **Escape sequences** for literal braces
+- ✅ **Partial templates** with simple loading
+- ✅ **Error reporting** with line/column tracking
+- ✅ **Memory management** with proper cleanup
+- ⚠️ **Control flow** (architecture ready, needs block parsing completion)
 
 ## Contributing
 
@@ -239,3 +256,10 @@ Contributions are welcome! Please ensure all tests pass before submitting a pull
 3. Follow Zig coding conventions
 4. Update documentation for new features
 5. Ensure memory safety and proper cleanup
+
+### Architecture Notes
+
+- Control flow parsing infrastructure is complete
+- Block content parsing needs refinement for nested constructs
+- Filter system is extensible for additional transformations
+- Partial loading system can be enhanced for file-based templates

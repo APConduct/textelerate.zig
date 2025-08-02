@@ -7,6 +7,7 @@ A fast and efficient template engine for Zig that supports both runtime and comp
 - **Runtime Templates**: Parse and render templates at runtime with dynamic content
 - **Compile-time Templates**: Zero-cost template compilation with compile-time variable validation
 - **Simple Syntax**: Uses `{{variable}}` syntax for variable interpolation
+- **Filter System**: Transform variables with filters like `{{name | uppercase}}`, `{{text | lowercase}}`
 - **Escape Sequences**: Support for literal braces using backslash escaping (`\{\{`, `\}\}`, `\\`)
 - **Type Safety**: Full compile-time type checking for template variables
 - **Memory Efficient**: Minimal allocations and proper memory management
@@ -82,9 +83,24 @@ pub fn main() !void {
 Textelerate uses a simple syntax with double curly braces:
 
 - `{{variable}}` - Insert a variable value
+- `{{variable | filter}}` - Apply a filter to transform the variable
+- `{{variable | filter1 | filter2}}` - Chain multiple filters
 - Variables can contain letters, numbers, and underscores
 - Whitespace around variable names is ignored: `{{ name }}` is the same as `{{name}}`
 - Use backslash escaping for literal braces: `\{\{` for `{{`, `\}\}` for `}}`, `\\` for `\`
+
+### Filters
+
+Transform variable values using the pipe (`|`) syntax:
+
+- `{{name | uppercase}}` - Convert text to uppercase
+- `{{name | lowercase}}` - Convert text to lowercase
+- `{{name | filter1 | filter2}}` - Chain multiple filters
+
+#### Available Filters
+
+- **uppercase**: Converts text to uppercase letters
+- **lowercase**: Converts text to lowercase letters
 
 ### Escape Sequences
 
@@ -100,6 +116,7 @@ To include literal `{{` and `}}` in your templates, use backslash escaping:
 Hello {{name}}!
 {{greeting}} {{first_name}} {{last_name}}, you have {{message_count}} messages.
 Welcome to {{place}}, the temperature is {{temperature}}°C.
+Filtered: {{name | uppercase}} and {{greeting | lowercase}}
 Use \{\{ and \}\} for literal braces: \{\{not_a_variable\}\}
 Backslash example: \\
 ```
@@ -175,6 +192,50 @@ See the `main()` function in `src/main.zig` for complete working examples.
 
 This project is available under the MIT license.
 
+## Development Roadmap
+
+### ✅ Completed Features
+
+- **Basic Template Parsing**: Variable interpolation with `{{variable}}` syntax
+- **Runtime Templates**: Dynamic template compilation and rendering
+- **Compile-time Templates**: Zero-cost template compilation with validation
+- **Escape Sequences**: Support for literal braces (`\{\{`, `\}\}`, `\\`)
+- **Filter System**: Variable transformation with `{{name | filter}}` syntax
+  - `uppercase` - Convert text to uppercase
+  - `lowercase` - Convert text to lowercase
+  - Filter chaining support
+
+### 🚧 In Progress / Planned Features
+
+- **Control Flow**: Conditional and loop constructs
+  - `{{#if condition}}...{{/if}}` - Conditional blocks
+  - `{{#for item in collection}}...{{/for}}` - Loop constructs
+- **Template Inheritance**: Include and extend functionality
+  - `{{> partial}}` - Include partial templates
+  - Template composition and inheritance
+- **Enhanced Error Reporting**: Better error messages with line/column numbers
+- **Additional Filters**: More built-in transformation filters
+  - `trim` - Remove whitespace
+  - `length` - Get string/array length
+  - `capitalize` - Capitalize first letter
+  - Custom filter registration
+
+### 💡 Future Enhancements
+
+- **Template Caching**: Compiled template caching system
+- **Async Template Loading**: Support for async partial loading
+- **Custom Delimiters**: Configurable template syntax
+- **Template Debugging**: Debug mode with detailed execution tracing
+- **Performance Optimizations**: Further runtime and compile-time optimizations
+
 ## Contributing
 
 Contributions are welcome! Please ensure all tests pass before submitting a pull request.
+
+### Development Guidelines
+
+1. All new features should include comprehensive tests
+2. Maintain compatibility with existing API
+3. Follow Zig coding conventions
+4. Update documentation for new features
+5. Ensure memory safety and proper cleanup

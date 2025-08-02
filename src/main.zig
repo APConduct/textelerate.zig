@@ -3,6 +3,8 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const Error = @import("error.zig").TemplateError;
+const DetailedError = @import("error.zig").DetailedError;
+const Position = @import("error.zig").Position;
 
 const Vec = std.ArrayList;
 const print = std.debug.print;
@@ -36,6 +38,14 @@ pub const Template = struct {
             for (self.fragments) |fragment| {
                 if (fragment == .text) {
                     self.allocator.free(fragment.text);
+                } else if (fragment == .variable) {
+                    // Free filter names and filter arrays
+                    for (fragment.variable.filters) |filter| {
+                        self.allocator.free(filter.name);
+                    }
+                    if (fragment.variable.filters.len > 0) {
+                        self.allocator.free(fragment.variable.filters);
+                    }
                 }
             }
             self.allocator.free(self.fragments);
@@ -46,14 +56,26 @@ pub const Template = struct {
         }
     };
 
-    /// A fragment represents either static text or a variable placeholder.
+    /// A fragment represents different types of template content
     const Fragment = union(enum) {
         text: []const u8, // Static text content
-        variable: u32, // Index into the variables array
+        variable: VariableRef, // Variable with optional filters
+    };
+
+    /// Variable reference with optional filters
+    const VariableRef = struct {
+        var_index: u32, // Index into the variables array
+        filters: []Filter,
     };
 
     /// Variable metadata containing the variable name.
     const Variable = struct { name: []const u8 };
+
+    /// Filter definition
+    const Filter = struct {
+        name: []const u8,
+        args: [][]const u8, // Filter arguments if any
+    };
 
     /// Escape sequences supported in templates:
     /// - \{\{ produces literal {{
@@ -87,8 +109,8 @@ pub const Template = struct {
         for (compiled.fragments) |fragment| {
             switch (fragment) {
                 .text => |text| try writer.writeAll(text),
-                .variable => |idx| {
-                    const var_name = compiled.vars[idx].name;
+                .variable => |var_ref| {
+                    const var_name = compiled.vars[var_ref.var_index].name;
 
                     // Use reflection to check for field and get value
                     const type_info = @typeInfo(@TypeOf(ctx));
@@ -97,15 +119,47 @@ pub const Template = struct {
                     }
 
                     var found = false;
+                    var value: []const u8 = "";
 
                     inline for (type_info.@"struct".fields) |field| {
                         if (std.mem.eql(u8, field.name, var_name)) {
                             const val = @field(ctx, field.name);
                             found = true;
-                            if (@TypeOf(val) == []const u8) {
-                                try writer.writeAll(val);
+
+                            // Apply filters if any, otherwise render directly
+                            if (var_ref.filters.len > 0) {
+                                // Convert to string for filter processing
+                                if (@TypeOf(val) == []const u8) {
+                                    value = val;
+                                } else {
+                                    // For now, convert numbers to empty string
+                                    value = "";
+                                }
+
+                                // Apply filters
+                                var filtered_value = value;
+                                for (var_ref.filters) |filter| {
+                                    const new_value = try self.applyFilter(filtered_value, filter);
+                                    // Free the previous filtered value if it was allocated
+                                    if (filtered_value.ptr != value.ptr) {
+                                        self.compiled.?.allocator.free(filtered_value);
+                                    }
+                                    filtered_value = new_value;
+                                }
+
+                                try writer.writeAll(filtered_value);
+
+                                // Free the final filtered value if it was allocated
+                                if (filtered_value.ptr != value.ptr) {
+                                    self.compiled.?.allocator.free(filtered_value);
+                                }
                             } else {
-                                try writer.print("{any}", .{val});
+                                // No filters, render directly
+                                if (@TypeOf(val) == []const u8) {
+                                    try writer.writeAll(val);
+                                } else {
+                                    try writer.print("{any}", .{val});
+                                }
                             }
                             break;
                         }
@@ -117,6 +171,28 @@ pub const Template = struct {
                 },
             }
         }
+    }
+
+    /// Apply a filter to a value
+    fn applyFilter(self: *Template, value: []const u8, filter: Filter) ![]const u8 {
+        const compiled = self.compiled orelse return Error.NotCompiled;
+        const allocator = compiled.allocator;
+
+        if (std.mem.eql(u8, filter.name, "uppercase")) {
+            var result = try allocator.alloc(u8, value.len);
+            for (value, 0..) |c, i| {
+                result[i] = std.ascii.toUpper(c);
+            }
+            return result;
+        } else if (std.mem.eql(u8, filter.name, "lowercase")) {
+            var result = try allocator.alloc(u8, value.len);
+            for (value, 0..) |c, i| {
+                result[i] = std.ascii.toLower(c);
+            }
+            return result;
+        }
+        // Unknown filter, return value unchanged
+        return value;
     }
 
     /// Render the template to a newly allocated string.
@@ -192,28 +268,12 @@ pub const Template = struct {
                     return Error.InvalidSyntax;
                 }
 
-                // Extract variable name (trim whitespace)
-                const var_name = std.mem.trim(u8, source[var_start..var_end], " \t\n\r");
+                // Extract content (trim whitespace)
+                const content = std.mem.trim(u8, source[var_start..var_end], " \t\n\r");
 
-                // Check if variable already exists
-                var var_idx: u32 = 0;
-                var found = false;
-                for (variables.items, 0..) |variable, idx| {
-                    if (std.mem.eql(u8, variable.name, var_name)) {
-                        var_idx = @intCast(idx);
-                        found = true;
-                        break;
-                    }
-                }
-
-                // Add new variable if not found
-                if (!found) {
-                    var_idx = @intCast(variables.items.len);
-                    const owned_name = try allocator.dupe(u8, var_name);
-                    try variables.append(.{ .name = owned_name });
-                }
-
-                try fragments.append(.{ .variable = var_idx });
+                // Parse variable with potential filters
+                const fragment = try parseVariable(content, &variables, allocator);
+                try fragments.append(fragment);
 
                 i = var_end + 2; // Skip past }}
                 txt_start = i;
@@ -236,6 +296,42 @@ pub const Template = struct {
             .vars = try variables.toOwnedSlice(),
             .allocator = allocator,
         };
+    }
+
+    /// Parse a variable with optional filters
+    fn parseVariable(content: []const u8, variables: *Vec(Variable), allocator: Allocator) !Fragment {
+        // Check for filters (pipe symbol)
+        var parts_iter = std.mem.splitScalar(u8, content, '|');
+        const var_part = std.mem.trim(u8, parts_iter.next() orelse content, " \t\n\r");
+
+        // Find or create variable
+        var var_idx: u32 = 0;
+        var found = false;
+        for (variables.items, 0..) |variable, idx| {
+            if (std.mem.eql(u8, variable.name, var_part)) {
+                var_idx = @intCast(idx);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            var_idx = @intCast(variables.items.len);
+            const owned_name = try allocator.dupe(u8, var_part);
+            try variables.append(.{ .name = owned_name });
+        }
+
+        // Parse filters
+        var filters = Vec(Filter).init(allocator);
+        while (parts_iter.next()) |filter_part| {
+            const filter_name = std.mem.trim(u8, filter_part, " \t\n\r");
+            if (filter_name.len > 0) {
+                const owned_filter_name = try allocator.dupe(u8, filter_name);
+                try filters.append(.{ .name = owned_filter_name, .args = &[_][]const u8{} });
+            }
+        }
+
+        return Fragment{ .variable = .{ .var_index = var_idx, .filters = try filters.toOwnedSlice() } };
     }
 
     /// Compile a template at compile-time for optimal performance.
@@ -347,7 +443,20 @@ pub const Template = struct {
                         @compileError("Empty variable name in template");
                     }
 
-                    fragments = fragments ++ [_]ComptimeFragment{.{ .tag = .variable, .data = var_name }};
+                    // Check for control flow or filters
+                    if (std.mem.startsWith(u8, var_name, "#if ")) {
+                        // Handle if block - this is simplified for compile-time
+                        fragments = fragments ++ [_]ComptimeFragment{.{ .tag = .variable, .data = var_name }};
+                    } else if (std.mem.startsWith(u8, var_name, "#for ")) {
+                        // Handle for block - this is simplified for compile-time
+                        fragments = fragments ++ [_]ComptimeFragment{.{ .tag = .variable, .data = var_name }};
+                    } else if (std.mem.startsWith(u8, var_name, "> ")) {
+                        // Handle partial include
+                        fragments = fragments ++ [_]ComptimeFragment{.{ .tag = .variable, .data = var_name }};
+                    } else {
+                        // Regular variable (possibly with filters)
+                        fragments = fragments ++ [_]ComptimeFragment{.{ .tag = .variable, .data = var_name }};
+                    }
 
                     i = var_end + 2; // Skip past }}
                     txt_start = i;
@@ -450,6 +559,28 @@ pub fn main() !void {
     const escape_result = try escape_template.render_to_string(escape_ctx, allocator);
     defer allocator.free(escape_result);
     print("Result: {s}\n", .{escape_result});
+
+    // Filter functionality example
+    print("\n4. Filter Functionality Example:\n", .{});
+    const filter_template_source = "Original: {{name}}, Uppercase: {{name | uppercase}}, Lowercase: {{greeting | lowercase}}";
+    var filter_template = Template.init(allocator, filter_template_source);
+    defer filter_template.deinit();
+
+    try filter_template.compile();
+
+    const FilterContext = struct {
+        name: []const u8,
+        greeting: []const u8,
+    };
+
+    const filter_ctx = FilterContext{
+        .name = "alice",
+        .greeting = "HELLO WORLD",
+    };
+
+    const filter_result = try filter_template.render_to_string(filter_ctx, allocator);
+    defer allocator.free(filter_result);
+    print("Result: {s}\n", .{filter_result});
 
     print("\nDemo complete! Run `zig test src/main.zig` to see all tests.\n", .{});
 }
@@ -672,4 +803,56 @@ test "edge cases for escape sequences" {
     const result4 = try template4.render_to_string(Context{ .name = "test" }, allocator);
     defer allocator.free(result4);
     try std.testing.expectEqualStrings("Normal \\a backslash and test", result4);
+}
+
+test "basic filter functionality" {
+    const allocator = std.testing.allocator;
+
+    const template_source = "Hello {{name | uppercase}} and {{greeting | lowercase}}!";
+    var template = Template.init(allocator, template_source);
+    defer template.deinit();
+
+    try template.compile();
+
+    const Context = struct {
+        name: []const u8,
+        greeting: []const u8,
+    };
+
+    const context = Context{
+        .name = "alice",
+        .greeting = "WORLD",
+    };
+
+    const result = try template.render_to_string(context, allocator);
+    defer allocator.free(result);
+
+    // Now filters actually transform the text
+    const expected = "Hello ALICE and world!";
+    try std.testing.expectEqualStrings(expected, result);
+}
+
+test "chained filters functionality" {
+    const allocator = std.testing.allocator;
+
+    const template_source = "{{name | lowercase | uppercase}} should be uppercase";
+    var template = Template.init(allocator, template_source);
+    defer template.deinit();
+
+    try template.compile();
+
+    const Context = struct {
+        name: []const u8,
+    };
+
+    const context = Context{
+        .name = "MiXeD cAsE",
+    };
+
+    const result = try template.render_to_string(context, allocator);
+    defer allocator.free(result);
+
+    // Chained filters: first lowercase, then uppercase
+    const expected = "MIXED CASE should be uppercase";
+    try std.testing.expectEqualStrings(expected, result);
 }

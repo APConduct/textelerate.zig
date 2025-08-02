@@ -10,6 +10,8 @@ const print = std.debug.print;
 /// A template engine that supports runtime and compile-time template parsing.
 ///
 /// The template syntax uses double curly braces for variables: {{variable_name}}
+/// Supports escaping: \{\{ for literal {{, \}\} for literal }}, \\ for literal \
+/// Non-escapable characters after \ are treated as literal text
 ///
 /// Example usage:
 /// ```zig
@@ -30,6 +32,12 @@ pub const Template = struct {
         allocator: Allocator,
 
         pub fn deinit(self: Compiled) void {
+            // Free text fragments that were allocated for escape sequences
+            for (self.fragments) |fragment| {
+                if (fragment == .text) {
+                    self.allocator.free(fragment.text);
+                }
+            }
             self.allocator.free(self.fragments);
             for (self.vars) |variable| {
                 self.allocator.free(variable.name);
@@ -47,6 +55,11 @@ pub const Template = struct {
     /// Variable metadata containing the variable name.
     const Variable = struct { name: []const u8 };
 
+    /// Escape sequences supported in templates:
+    /// - \{\{ produces literal {{
+    /// - \}\} produces literal }}
+    /// - \\ produces literal \
+    /// - \<other> produces literal \<other>
     /// Initialize a new template with the given source string.
     /// The template must be compiled before it can be rendered.
     pub fn init(allocator: Allocator, source: []const u8) Template {
@@ -116,18 +129,53 @@ pub const Template = struct {
 
     /// Parse a template source string into compiled fragments and variables.
     /// This is used internally for runtime template compilation.
+    /// Supports escaping: \{\{ for literal {{, \}\} for literal }}, \\ for literal \
     fn parse_template(source: []const u8, allocator: Allocator) !Template.Compiled {
         var fragments = Vec(Template.Fragment).init(allocator);
         var variables = Vec(Template.Variable).init(allocator);
+
+        var processed_text = Vec(u8).init(allocator);
+        defer processed_text.deinit();
 
         var i: usize = 0;
         var txt_start: usize = 0;
 
         while (i < source.len) {
+            // Handle escape sequences
+            if (source[i] == '\\' and i + 1 < source.len) {
+                const next_char = source[i + 1];
+                if (next_char == '{' or next_char == '}' or next_char == '\\') {
+                    // Add text before escape sequence
+                    if (i > txt_start) {
+                        try processed_text.appendSlice(source[txt_start..i]);
+                    }
+
+                    // Add the escaped character
+                    try processed_text.append(next_char);
+
+                    // Create fragment with processed text if any
+                    if (processed_text.items.len > 0) {
+                        const owned_text = try allocator.dupe(u8, processed_text.items);
+                        try fragments.append(.{ .text = owned_text });
+                        processed_text.clearRetainingCapacity();
+                    }
+
+                    i += 2; // Skip both backslash and escaped character
+                    txt_start = i;
+                    continue;
+                }
+            }
+
+            // Handle variable start
             if (i + 1 < source.len and source[i] == '{' and source[i + 1] == '{') {
-                // Add any text before this variable
+                // Add any text before this variable (including processed escapes)
                 if (i > txt_start) {
-                    try fragments.append(.{ .text = source[txt_start..i] });
+                    try processed_text.appendSlice(source[txt_start..i]);
+                }
+                if (processed_text.items.len > 0) {
+                    const owned_text = try allocator.dupe(u8, processed_text.items);
+                    try fragments.append(.{ .text = owned_text });
+                    processed_text.clearRetainingCapacity();
                 }
 
                 // Find the end of the variable
@@ -173,8 +221,14 @@ pub const Template = struct {
                 i += 1;
             }
         }
+
+        // Add any remaining text
         if (txt_start < source.len) {
-            try fragments.append(.{ .text = source[txt_start..] });
+            try processed_text.appendSlice(source[txt_start..]);
+        }
+        if (processed_text.items.len > 0) {
+            const owned_text = try allocator.dupe(u8, processed_text.items);
+            try fragments.append(.{ .text = owned_text });
         }
 
         return Template.Compiled{
@@ -232,15 +286,45 @@ pub const Template = struct {
     fn parse_template_comptime(comptime template_str: []const u8) []const ComptimeFragment {
         comptime {
             var fragments: []const ComptimeFragment = &[_]ComptimeFragment{};
+            var processed_text: []const u8 = "";
 
             var i: usize = 0;
             var txt_start: usize = 0;
 
             while (i < template_str.len) {
+                // Handle escape sequences
+                if (template_str[i] == '\\' and i + 1 < template_str.len) {
+                    const next_char = template_str[i + 1];
+                    if (next_char == '{' or next_char == '}' or next_char == '\\') {
+                        // Add text before escape sequence
+                        if (i > txt_start) {
+                            processed_text = processed_text ++ template_str[txt_start..i];
+                        }
+
+                        // Add the escaped character
+                        processed_text = processed_text ++ template_str[i + 1 .. i + 2];
+
+                        // Create fragment with processed text if any
+                        if (processed_text.len > 0) {
+                            fragments = fragments ++ [_]ComptimeFragment{.{ .tag = .text, .data = processed_text }};
+                            processed_text = "";
+                        }
+
+                        i += 2; // Skip both backslash and escaped character
+                        txt_start = i;
+                        continue;
+                    }
+                }
+
+                // Handle variable start
                 if (i + 1 < template_str.len and template_str[i] == '{' and template_str[i + 1] == '{') {
-                    // Add any text before this variable
+                    // Add any text before this variable (including processed escapes)
                     if (i > txt_start) {
-                        fragments = fragments ++ [_]ComptimeFragment{.{ .tag = .text, .data = template_str[txt_start..i] }};
+                        processed_text = processed_text ++ template_str[txt_start..i];
+                    }
+                    if (processed_text.len > 0) {
+                        fragments = fragments ++ [_]ComptimeFragment{.{ .tag = .text, .data = processed_text }};
+                        processed_text = "";
                     }
 
                     // Find the end of the variable
@@ -274,7 +358,10 @@ pub const Template = struct {
 
             // Add any remaining text
             if (txt_start < template_str.len) {
-                fragments = fragments ++ [_]ComptimeFragment{.{ .tag = .text, .data = template_str[txt_start..] }};
+                processed_text = processed_text ++ template_str[txt_start..];
+            }
+            if (processed_text.len > 0) {
+                fragments = fragments ++ [_]ComptimeFragment{.{ .tag = .text, .data = processed_text }};
             }
 
             return fragments;
@@ -343,6 +430,26 @@ pub fn main() !void {
 
     try CompiledTemplate.render(compile_ctx, buffer.writer());
     print("Result: {s}\n", .{buffer.items});
+
+    // Escape sequences example
+    print("\n3. Escape Sequences Example:\n", .{});
+    const escape_template_source = "To show literal braces: \\{\\{ and \\}\\}. Variable: {{name}}. Backslash: \\\\";
+    var escape_template = Template.init(allocator, escape_template_source);
+    defer escape_template.deinit();
+
+    try escape_template.compile();
+
+    const EscapeContext = struct {
+        name: []const u8,
+    };
+
+    const escape_ctx = EscapeContext{
+        .name = "escaped",
+    };
+
+    const escape_result = try escape_template.render_to_string(escape_ctx, allocator);
+    defer allocator.free(escape_result);
+    print("Result: {s}\n", .{escape_result});
 
     print("\nDemo complete! Run `zig test src/main.zig` to see all tests.\n", .{});
 }
@@ -481,4 +588,88 @@ test "compile-time template with multiple variables" {
 
     const expected = "Hello World! Today is Monday and it's sunny.";
     try std.testing.expectEqualStrings(expected, buffer.items);
+}
+
+test "runtime template with escaped braces" {
+    const allocator = std.testing.allocator;
+
+    const template_source = "Use \\{\\{ and \\}\\} for literal braces, and {{name}} for variables. Also \\\\ for backslash.";
+    var template = Template.init(allocator, template_source);
+    defer template.deinit();
+
+    try template.compile();
+
+    const Context = struct {
+        name: []const u8,
+    };
+
+    const context = Context{
+        .name = "test",
+    };
+
+    const result = try template.render_to_string(context, allocator);
+    defer allocator.free(result);
+
+    const expected = "Use {{ and }} for literal braces, and test for variables. Also \\ for backslash.";
+    try std.testing.expectEqualStrings(expected, result);
+}
+
+test "compile-time template with escaped braces" {
+    const allocator = std.testing.allocator;
+
+    const CompiledTemplate = Template.compile_template("Code: \\{\\{ {{variable}} \\}\\} and \\\\ backslash");
+
+    const Context = struct {
+        variable: []const u8,
+    };
+
+    const context = Context{
+        .variable = "value",
+    };
+
+    var buffer = Vec(u8).init(allocator);
+    defer buffer.deinit();
+
+    try CompiledTemplate.render(context, buffer.writer());
+
+    const expected = "Code: {{ value }} and \\ backslash";
+    try std.testing.expectEqualStrings(expected, buffer.items);
+}
+
+test "edge cases for escape sequences" {
+    const allocator = std.testing.allocator;
+
+    // Test backslash at end of template
+    var template1 = Template.init(allocator, "Text ends with \\");
+    defer template1.deinit();
+    try template1.compile();
+    const result1 = try template1.render_to_string(.{}, allocator);
+    defer allocator.free(result1);
+    try std.testing.expectEqualStrings("Text ends with \\", result1);
+
+    // Test multiple consecutive backslashes
+    var template2 = Template.init(allocator, "Multiple backslashes: \\\\\\\\ and {{name}}");
+    defer template2.deinit();
+    try template2.compile();
+    const Context = struct { name: []const u8 };
+    const result2 = try template2.render_to_string(Context{ .name = "test" }, allocator);
+    defer allocator.free(result2);
+    try std.testing.expectEqualStrings("Multiple backslashes: \\\\ and test", result2);
+
+    // Test escaped braces mixed with variables
+    var template3 = Template.init(allocator, "\\{\\{{{name}}\\}\\} and {{value}}");
+    defer template3.deinit();
+    try template3.compile();
+    const Context3 = struct { name: []const u8, value: []const u8 };
+    const result3 = try template3.render_to_string(Context3{ .name = "var", .value = "val" }, allocator);
+    defer allocator.free(result3);
+    try std.testing.expectEqualStrings("{{var}} and val", result3);
+
+    // Test backslash before non-escapable character
+    var template4 = Template.init(allocator, "Normal \\a backslash and {{name}}");
+    defer template4.deinit();
+    try template4.compile();
+    const result4 = try template4.render_to_string(Context{ .name = "test" }, allocator);
+    defer allocator.free(result4);
+    try std.testing.expectEqualStrings("Normal \\a backslash and test", result4);
 }

@@ -7,6 +7,7 @@ A fast and efficient template engine for Zig that supports both runtime and comp
 - **Runtime Templates**: Parse and render templates at runtime with dynamic content
 - **Compile-time Templates**: Zero-cost template compilation with compile-time variable validation
 - **Simple Syntax**: Uses `{{variable}}` syntax for variable interpolation
+- **Escape Sequences**: Support for literal braces using backslash escaping (`\{\{`, `\}\}`, `\\`)
 - **Type Safety**: Full compile-time type checking for template variables
 - **Memory Efficient**: Minimal allocations and proper memory management
 - **No Dependencies**: Pure Zig implementation with no external dependencies
@@ -83,6 +84,15 @@ Textelerate uses a simple syntax with double curly braces:
 - `{{variable}}` - Insert a variable value
 - Variables can contain letters, numbers, and underscores
 - Whitespace around variable names is ignored: `{{ name }}` is the same as `{{name}}`
+- Use backslash escaping for literal braces: `\{\{` for `{{`, `\}\}` for `}}`, `\\` for `\`
+
+### Escape Sequences
+
+To include literal `{{` and `}}` in your templates, use backslash escaping:
+
+- `\{\{` renders as literal `{{`
+- `\}\}` renders as literal `}}`
+- `\\` renders as literal `\`
 
 ### Examples
 
@@ -90,6 +100,8 @@ Textelerate uses a simple syntax with double curly braces:
 Hello {{name}}!
 {{greeting}} {{first_name}} {{last_name}}, you have {{message_count}} messages.
 Welcome to {{place}}, the temperature is {{temperature}}°C.
+Use \{\{ and \}\} for literal braces: \{\{not_a_variable\}\}
+Backslash example: \\
 ```
 
 ## API Reference

@@ -3,7 +3,7 @@ name: Update Dependencies
 on:
   schedule:
     # Run weekly on Sundays at 02:00 UTC
-    - cron: '0 2 * * 0'
+    - cron: "0 2 * * 0"
   workflow_dispatch:
 
 jobs:
@@ -80,7 +80,7 @@ jobs:
             - Updated CI workflow to use Zig ${{ steps.latest_version.outputs.LATEST_VERSION }}
             - Verified compatibility with all tests passing
             - Automated update via dependency workflow
-          title: 'chore: update Zig version to ${{ steps.latest_version.outputs.LATEST_VERSION }}'
+          title: "chore: update Zig version to ${{ steps.latest_version.outputs.LATEST_VERSION }}"
           body: |
             ## Zig Version Update
 
@@ -112,7 +112,7 @@ jobs:
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: '0.13.0'
+          version: "0.14.1"
 
       - name: Audit dependencies
         run: |

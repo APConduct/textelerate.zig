@@ -2,14 +2,14 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
-    tags: [ 'v*' ]
+    branches: [main, develop]
+    tags: ["v*"]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: '0.13.0'
+  ZIG_VERSION: "0.14.1"
 
 jobs:
   test:
@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        zig-version: ['0.13.0', 'master']
+        zig-version: ["0.14.1", "master"]
       fail-fast: false
 
     steps:

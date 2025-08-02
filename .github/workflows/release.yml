@@ -4,31 +4,31 @@ on:
   workflow_dispatch:
     inputs:
       version_type:
-        description: 'Type of version bump'
+        description: "Type of version bump"
         required: true
-        default: 'patch'
+        default: "patch"
         type: choice
         options:
           - patch
           - minor
           - major
       custom_version:
-        description: 'Custom version (optional, overrides version_type)'
+        description: "Custom version (optional, overrides version_type)"
         required: false
         type: string
       prerelease:
-        description: 'Create a prerelease'
+        description: "Create a prerelease"
         required: false
         default: false
         type: boolean
       draft:
-        description: 'Create as draft release'
+        description: "Create as draft release"
         required: false
         default: false
         type: boolean
 
 env:
-  ZIG_VERSION: '0.13.0'
+  ZIG_VERSION: "0.14.1"
 
 jobs:
   prepare-release:

@@ -38,7 +38,7 @@ act --workflows .github/workflows/ci.yml
 ## Prerequisites
 
 ### For Quick Testing
-- **Zig**: Version 0.13.0 or later
+- **Zig**: Version 0.14.1 or later
 - **Git**: For version checking
 
 ### For act Testing
@@ -145,7 +145,7 @@ act workflow_dispatch      # Manual trigger
 
 ```bash
 # Run with custom environment
-act --env ZIG_VERSION=0.13.0 --job test
+act --env ZIG_VERSION=0.14.1 --job test
 
 # Run with secrets (for testing release workflow)
 act --secret GITHUB_TOKEN=your_token --workflows .github/workflows/release.yml
@@ -237,7 +237,7 @@ cp env.act.template .env.act
 # Then customize as needed
 GITHUB_TOKEN=fake_token_for_local_testing
 GITHUB_REPOSITORY=yourusername/textelerate
-ZIG_VERSION=0.13.0
+ZIG_VERSION=0.14.1
 CI=true
 GITHUB_ACTIONS=true
 LOCAL_TESTING=true
@@ -287,7 +287,7 @@ Solution: Increase Docker memory limit to 8GB+
 ```bash
 # Zig version mismatch
 Error: zig version not compatible
-Solution: Install Zig 0.13.0 or later
+Solution: Install Zig 0.14.1 or later
 
 # Build failures
 Error: build failed

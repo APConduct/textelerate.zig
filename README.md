@@ -217,6 +217,8 @@ Textelerate provides comprehensive error handling:
 
 ## Building and Testing
 
+**Requirements**: Zig 0.14.1 or later
+
 ```bash
 # Run tests
 zig test src/main.zig

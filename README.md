@@ -1,8 +1,8 @@
 # Textelerate
 
-[![Version](https://img.shields.io/github/v/tag/APConduct/textelerate?label=version&color=blue)](https://github.com/yourusername/textelerate/releases)
+[![Version](https://img.shields.io/github/v/tag/APConduct/textelerate?label=version&color=blue)](https://github.com/APConduct/textelerate/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/github/actions/workflow/status/APConduct/textelerate/ci.yml?branch=main&label=tests)](https://github.com/yourusername/textelerate/actions)
+[![Tests](https://img.shields.io/github/actions/workflow/status/APConduct/textelerate/ci.yml?branch=main&label=tests)](https://github.com/APConduct/textelerate/actions)
 [![Zig](https://img.shields.io/badge/zig-0.14.1+-orange.svg)](https://ziglang.org/)
 
 A fast and efficient template engine for Zig that supports both runtime and compile-time template compilation.

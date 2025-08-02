@@ -85,6 +85,8 @@ Textelerate uses a simple syntax with double curly braces:
 - `{{variable}}` - Insert a variable value
 - `{{variable | filter}}` - Apply a filter to transform the variable
 - `{{variable | filter1 | filter2}}` - Chain multiple filters
+- `{{#if condition}}...{{/if}}` - Conditional blocks
+- `{{#for item in collection}}...{{/for}}` - Loop over collections
 - Variables can contain letters, numbers, and underscores
 - Whitespace around variable names is ignored: `{{ name }}` is the same as `{{name}}`
 - Use backslash escaping for literal braces: `\{\{` for `{{`, `\}\}` for `}}`, `\\` for `\`
@@ -102,6 +104,29 @@ Transform variable values using the pipe (`|`) syntax:
 - **uppercase**: Converts text to uppercase letters
 - **lowercase**: Converts text to lowercase letters
 
+### Control Flow
+
+Control the flow of template rendering with conditional blocks and loops:
+
+- `{{#if variable}}content{{/if}}` - Render content if variable is truthy
+- `{{#for item in collection}}{{item}}{{/for}}` - Loop over collection items
+
+#### Conditional Blocks
+
+```
+{{#if user_logged_in}}
+  Welcome back, {{username}}!
+{{/if}}
+```
+
+#### Loop Blocks
+
+```
+{{#for product in products}}
+  Product: {{product}}
+{{/for}}
+```
+
 ### Escape Sequences
 
 To include literal `{{` and `}}` in your templates, use backslash escaping:
@@ -117,6 +142,8 @@ Hello {{name}}!
 {{greeting}} {{first_name}} {{last_name}}, you have {{message_count}} messages.
 Welcome to {{place}}, the temperature is {{temperature}}°C.
 Filtered: {{name | uppercase}} and {{greeting | lowercase}}
+{{#if show_welcome}}Welcome {{name}}!{{/if}}
+{{#for item in items}}Item: {{item}} {{/for}}
 Use \{\{ and \}\} for literal braces: \{\{not_a_variable\}\}
 Backslash example: \\
 ```
@@ -213,17 +240,21 @@ This project is available under the MIT license.
   - Graceful error handling with proper cleanup
   - Memory leak prevention in error cases
   - Comprehensive error test coverage
+- **Control Flow**: Conditional and loop constructs
+  - `{{#if condition}}...{{/if}}` - Conditional blocks
+  - `{{#for item in collection}}...{{/for}}` - Loop constructs
+  - Proper variable scoping within loops
+  - Block content parsing and rendering
 
 ### 🚧 Partially Implemented
 
-- **Control Flow**: Architecture ready but needs block parsing refinement
-  - `{{#if condition}}...{{/if}}` - Conditional blocks (parser structure complete)
-  - `{{#for item in collection}}...{{/for}}` - Loop constructs (parser structure complete)
-  - Block content parsing needs enhancement for full functionality
+- **Nested Control Flow**: Single-level blocks working, nested blocks need enhancement
+  - `{{#if outer}}{{#if inner}}...{{/if}}{{/if}}` - Nested conditionals (in progress)
+  - Complex nested loop and conditional combinations
 
 ### 💡 Future Enhancements
 
-- **Advanced Control Flow**: Complete block parsing implementation
+- **Advanced Nested Control Flow**: Deep nesting support for complex templates
 - **Template Caching**: Compiled template caching system
 - **Async Template Loading**: Support for async partial loading from files
 - **Custom Delimiters**: Configurable template syntax
@@ -231,13 +262,15 @@ This project is available under the MIT license.
   - `trim` - Remove whitespace
   - `length` - Get string/array length
   - `capitalize` - Capitalize first letter
+  - `date` - Date formatting filters
   - Custom filter registration system
 - **Template Debugging**: Debug mode with detailed execution tracing
 - **Performance Optimizations**: Further runtime and compile-time optimizations
+- **Else Blocks**: `{{#if condition}}...{{else}}...{{/if}}` support
 
 ## Current Status
 
-**All 14 tests passing** ✅
+**All 16 tests passing** ✅
 
 The template engine now includes:
 - ✅ **Variable interpolation** with filters
@@ -245,7 +278,7 @@ The template engine now includes:
 - ✅ **Partial templates** with simple loading
 - ✅ **Error reporting** with line/column tracking and proper error handling
 - ✅ **Memory management** with proper cleanup and leak prevention
-- ⚠️ **Control flow** (architecture ready, needs block parsing completion)
+- ✅ **Control flow** with if blocks and for loops
 
 ## Contributing
 
@@ -269,4 +302,6 @@ Contributions are welcome! Please ensure all tests pass before submitting a pull
 - Partial loading system can be enhanced for file-based templates
 - Error handling system provides comprehensive coverage
 - Memory management ensures leak-free operation
-- All 14 tests passing with full coverage of implemented features
+- All 16 tests passing with full coverage of implemented features
+- Control flow blocks working with proper variable scoping
+- Memory-safe block parsing and rendering

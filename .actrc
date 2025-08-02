@@ -1,0 +1,39 @@
+# act configuration for Textelerate CI/CD testing
+# This file configures act to run GitHub Actions locally
+
+# Use medium-sized runner images for better compatibility
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+-P ubuntu-20.04=catthehacker/ubuntu:act-20.04
+-P ubuntu-22.04=catthehacker/ubuntu:act-22.04
+
+# Use Windows runner for cross-platform testing (if needed)
+-P windows-latest=catthehacker/ubuntu:act-latest
+
+# Use macOS runner substitute (limited support)
+-P macos-latest=catthehacker/ubuntu:act-latest
+
+# Set default platform
+--platform ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# Environment variables for local testing
+--env GITHUB_TOKEN=fake_token_for_local_testing
+--env CI=true
+--env GITHUB_ACTIONS=true
+
+# Verbose output for debugging
+--verbose
+
+# Don't pull images every time (faster subsequent runs)
+--pull=false
+
+# Use specific container architecture (removed - not supported)
+# --container-architecture linux/amd64
+
+# Bind mount for better file system performance (removed - not supported)
+# --bind
+
+# Reuse containers for faster testing (removed - not supported)
+# --reuse
+
+# Set working directory (removed - not supported in current act version)
+# --workdir /github/workspace

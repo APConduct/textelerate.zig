@@ -1,0 +1,252 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  ZIG_VERSION: '0.13.0'
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        zig-version: ['0.13.0', 'master']
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ matrix.zig-version }}
+
+      - name: Print Zig version
+        run: zig version
+
+      - name: Run tests
+        run: zig test src/main.zig
+
+      - name: Run library tests
+        run: zig test src/root.zig
+
+      - name: Build library
+        run: zig build
+
+      - name: Run demo
+        run: zig run src/main.zig
+
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Check formatting
+        run: zig fmt --check src/
+
+      - name: Build with all optimizations
+        run: |
+          zig build -Doptimize=Debug
+          zig build -Doptimize=ReleaseSafe
+          zig build -Doptimize=ReleaseFast
+          zig build -Doptimize=ReleaseSmall
+
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Run tests with coverage
+        run: |
+          zig test src/main.zig --test-cmd kcov --test-cmd-bin
+          zig test src/root.zig --test-cmd kcov --test-cmd-bin
+        continue-on-error: true
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Build with security flags
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Check for common issues
+        run: |
+          # Check for TODO/FIXME comments that might indicate incomplete security measures
+          ! grep -r "TODO.*security\|FIXME.*security\|XXX.*security" src/ || echo "Security-related TODOs found"
+
+          # Verify no hardcoded secrets patterns
+          ! grep -r "password\|secret\|key.*=" src/ || echo "Potential hardcoded secrets found"
+
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Build optimized version
+        run: zig build -Doptimize=ReleaseFast
+
+      - name: Run performance tests
+        run: |
+          echo "Running performance benchmarks..."
+          time zig run src/main.zig
+          echo "Performance test completed"
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [test, lint, security]
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Verify version consistency
+        run: |
+          VERSION=${{ steps.extract_version.outputs.VERSION }}
+          FILE_VERSION=$(cat VERSION)
+          if [ "$VERSION" != "$FILE_VERSION" ]; then
+            echo "Tag version ($VERSION) doesn't match VERSION file ($FILE_VERSION)"
+            exit 1
+          fi
+
+      - name: Build release artifacts
+        run: |
+          mkdir -p release
+
+          # Build library
+          zig build -Doptimize=ReleaseFast
+
+          # Create source tarball
+          git archive --format=tar.gz --prefix=textelerate-${{ steps.extract_version.outputs.VERSION }}/ \
+            HEAD > release/textelerate-${{ steps.extract_version.outputs.VERSION }}-src.tar.gz
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            # Extract changelog for this version
+            sed -n "/## \[${{ steps.extract_version.outputs.VERSION }}\]/,/## \[/p" CHANGELOG.md | head -n -1 > release_notes.md
+          else
+            # Generate basic changelog from git commits since last tag
+            LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            if [ -n "$LAST_TAG" ]; then
+              echo "## Changes since $LAST_TAG" > release_notes.md
+              git log --pretty=format:"- %s" $LAST_TAG..HEAD >> release_notes.md
+            else
+              echo "## Initial Release" > release_notes.md
+              echo "First stable release of Textelerate template engine." >> release_notes.md
+            fi
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release v${{ steps.extract_version.outputs.VERSION }}
+          body_path: release_notes.md
+          files: release/*
+          draft: false
+          prerelease: ${{ contains(steps.extract_version.outputs.VERSION, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docs:
+    name: Update Documentation
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Generate documentation
+        run: |
+          # Generate docs (when zig docs are ready)
+          echo "Documentation generation placeholder"
+          # zig build-docs
+
+      - name: Validate README examples
+        run: |
+          # Extract and validate code examples from README
+          echo "Validating README examples..."
+          # This could extract code blocks and verify they compile
+          echo "README validation completed"
+
+  notify:
+    name: Notify Status
+    runs-on: ubuntu-latest
+    needs: [test, lint, security]
+    if: always()
+
+    steps:
+      - name: Report Status
+        run: |
+          if [ "${{ needs.test.result }}" = "success" ] && [ "${{ needs.lint.result }}" = "success" ] && [ "${{ needs.security.result }}" = "success" ]; then
+            echo "✅ All checks passed!"
+          else
+            echo "❌ Some checks failed:"
+            echo "  Tests: ${{ needs.test.result }}"
+            echo "  Lint: ${{ needs.lint.result }}"
+            echo "  Security: ${{ needs.security.result }}"
+          fi

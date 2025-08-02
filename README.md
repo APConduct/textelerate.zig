@@ -226,7 +226,48 @@ zig run src/main.zig
 
 # Build as library
 zig build-lib src/main.zig
+
+# Local CI/CD testing (fast)
+./scripts/quick-test.sh quick
+
+# Full local CI simulation
+./scripts/quick-test.sh full
 ```
+
+## Local Testing
+
+Textelerate includes comprehensive local testing tools to validate your changes before pushing to GitHub:
+
+### Quick Testing (Recommended)
+```bash
+# Fast smoke test (30 seconds)
+./scripts/quick-test.sh quick
+
+# Full CI simulation (3-5 minutes)  
+./scripts/quick-test.sh full
+
+# Individual components
+./scripts/quick-test.sh test        # Run test suite
+./scripts/quick-test.sh format      # Check formatting
+./scripts/quick-test.sh security    # Security checks
+```
+
+### Docker-based Testing with act
+```bash
+# Install act (GitHub Actions local runner)
+brew install act  # macOS
+
+# List available workflows
+act --list
+
+# Run specific job
+act --job test --platform ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# Run full CI workflow  
+act --workflows .github/workflows/ci.yml
+```
+
+**See [LOCAL_TESTING.md](LOCAL_TESTING.md) for complete testing guide.**
 
 ## Examples
 

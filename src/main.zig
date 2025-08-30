@@ -1,4 +1,7 @@
 const std = @import("std");
+const zls = @import("zls");
+
+const types = zls.lsp.types;
 
 const Allocator = std.mem.Allocator;
 

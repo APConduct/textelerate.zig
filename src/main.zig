@@ -9,7 +9,7 @@ const Error = @import("error.zig").TemplateError;
 const DetailedError = @import("error.zig").DetailedError;
 const Position = @import("error.zig").Position;
 
-const Vec = std.ArrayList;
+const Vec = std.array_list.Managed;
 const print = std.debug.print;
 
 /// A template engine that supports runtime and compile-time template parsing.
